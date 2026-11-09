@@ -1,0 +1,544 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0}</style></head><body><title>Sound to Sea</title>
+
+<!--
+Sound To Sea: index.html 
+What this file is: 
+The listening side of our system. It plays a song, turns the sound into numbers and
+sends them on.
+
+The chain: 
+This page -> bridge.py -> Wekinator -> Processing -> EsP32-S3 -> five strips and 
+neopixels.
+
+The file has 3 parts: 
+1. Looks (CSS): how the page is styled 
+2. Screens (HTML): what you see 
+3. CODE (JavaScript): what it does
+
+How to run it: 
+Open it in chrome on the laptop that runs bridge.py.
+Keep this tab visible, because Chrome slows down hidden tabs!
+
+Two ways to listen:
+Headphones: the page hears the sound from inside the computer (songs, files, tabs).
+Microphone: the page hears the room through the USB microphone.
+-->
+
+
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+
+/*
+Part 1: Looks (CSS)
+What it does: 
+Colors, font, sizes and layout. Nothing in here changes how the music or the 
+motors behave. 
+
+Layout: 
+One centered column with three screens: welcome, source and listening. Deep sea
+ink as the background, warm amber as the only accent color. 
+
+To change the colors: 
+Edit the values in :root below.
+*/
+
+:root{--ink:#07161c;--deep:#0d2a33;--deep2:#12394a;--foam:#dcf1ec;--sea:#4fb3aa;--lamp:#ffb347;--mute:#86a9a8;--line:#1f4652;--bad:#ff8a73;
+--display:'Bricolage Grotesque',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--ink);color:var(--foam);font:16px/1.5 var(--display);padding-block:28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));min-height:100vh}
+main{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1{font-size:clamp(40px,9vw,76px);line-height:.95;margin:0;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:24px;margin:0;font-weight:600;text-wrap:balance}
+p{margin:0;max-width:60ch;color:var(--foam)}
+.mute{color:var(--mute)}
+.mono{font-family:var(--mono);font-size:13px}
+button,.btn{font:600 16px var(--display);border:0;border-radius:10px;padding:13px 20px;cursor:pointer;background:var(--lamp);color:#1b1100}
+button.ghost{background:transparent;color:var(--foam);border:1px solid var(--line)}
+button:focus-visible,input:focus-visible,.card:focus-visible{outline:2px solid var(--lamp);outline-offset:2px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font:500 12px var(--mono);padding:5px 10px;border-radius:99px;border:1px solid var(--line);color:var(--mute)}
+.chip.on{color:var(--sea);border-color:var(--sea)}.chip.warn{color:var(--bad);border-color:var(--bad)}
+.hero{display:flex;flex-direction:column;gap:18px;padding-block:20px}
+.hero canvas{width:100%;height:150px;display:block}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.step{border-top:1px solid var(--line);padding-top:10px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{background:var(--deep);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px;text-align:left;color:var(--foam);font:inherit;cursor:pointer;min-width:0}
+.card:hover{border-color:var(--sea)}
+.card b{font-size:18px}
+.card span{color:var(--mute);font-size:14px}
+.sec{display:flex;flex-direction:column;gap:12px}
+.lab{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+input[type=text]{flex:1;min-width:200px;background:var(--deep);border:1px solid var(--line);border-radius:10px;padding:12px;color:var(--foam);font:14px var(--mono)}
+input[type=file]{display:none}
+select{flex:1;min-width:200px;background:var(--deep);border:1px solid var(--line);border-radius:10px;padding:12px;color:var(--foam);font:14px var(--mono)}
+.stage{background:linear-gradient(180deg,var(--deep2),var(--deep));border:1px solid var(--line);border-radius:16px;padding:10px}
+.stage canvas{width:100%;height:260px;display:block}
+.meters{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.meter{display:flex;flex-direction:column;gap:6px;min-width:0}
+.bar{height:8px;background:var(--deep);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--sea)}
+.meter.loud .bar i{background:var(--lamp)}
+.meter .v{font:500 18px var(--mono);font-variant-numeric:tabular-nums}
+.note{border-left:2px solid var(--lamp);padding-left:12px}
+.msg{min-height:20px;color:var(--bad);font-size:14px}
+@media (max-width:520px){.meters{grid-template-columns:repeat(3,1fr)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<!--
+Part 2: Screens (HTML)
+What it does:
+Everything you see on the page. There are three screens and only one is visible 
+at a time. The code in Part 3 switches between them with the function show().
+
+The three screens: 
+s1= welcome, s2= choose a song, s3= listening.
+With headphones the path is s1, s2, s3. With the microphone it is s1, s3 
+(there is no song to choose).
+-->
+
+<main>
+ <!-- 
+  Screen 1: Welcome
+  The title, a small animated sea, three short steps and two buttons: "I am wearing
+  headphones" and "I am using a microphone". The red message line under the buttons
+  shows an error if the microphone can not be opened.
+ -->
+ <section id="s1" class="hero">
+  <div class="top"><span class="lab">listening side</span></div>
+  <h1>Sound to Sea</h1>
+  <canvas id="heroSea" aria-hidden="true"></canvas>
+  <p>Pick a song.</p>
+  <div class="steps">
+   <div class="step"><div class="lab">1 Headphones</div><p class="mute">Plug in and set your laptop sound output to them. A noisy room does not matter.</p></div>
+   <div class="step"><div class="lab">2 Choose</div><p class="mute">A demo song, your own file, a radio stream, or a tab such as YouTube.</p></div>
+   <div class="step"><div class="lab">3 Watch</div><p class="mute">The five strips rise and fall with the music.</p></div>
+  </div>
+  <div class="row"><button id="go">I am wearing headphones</button><button class="ghost" id="goMic">I am using a microphone</button></div>
+  <div class="msg" id="msg1" role="status"></div>
+ </section>
+
+ <!-- 
+  Screen 2: Choose a Source
+  Three demo songs that work without internet, your own audio file, a shared 
+  browser tab, or a radio stream address. The chip at the top shows if bridge.py
+  is running.
+ -->
+ <section id="s2" class="sec" hidden>
+  <div class="top"><h2>Choose what to listen to</h2><div class="chips"><span class="chip" id="chipBridge1">bridge: checking</span></div></div>
+  <div class="lab">Demo songs · always work, no internet</div>
+  <div class="cards">
+   <button class="card" data-demo="calm"><b>Slow tide</b><span>Soft pads, 70 bpm. Gentle swell.</span></button>
+   <button class="card" data-demo="energy"><b>Storm beat</b><span>Kick and hats, 128 bpm. Big, fast waves.</span></button>
+   <button class="card" data-demo="bass"><b>Deep bass</b><span>Sub bass, 90 bpm. Heavy and slow.</span></button>
+  </div>
+  <div class="lab">Your own music</div>
+  <div class="row"><label class="btn ghost" for="file" tabindex="0" id="fileBtn" style="border:1px solid var(--line);background:transparent;color:var(--foam)">Choose an audio file</label><input type="file" id="file" accept="audio/*"></div>
+  <div class="lab">Live and online</div>
+  <div class="cards">
+   <button class="card" id="tab"><b>Share a browser tab</b><span>Open YouTube, SoundCloud or Spotify web in another tab, then share that tab with sound.</span></button>
+   <div class="card" style="cursor:default"><b>Radio stream</b><span>Paste a direct stream address (some stations block this).</span>
+    <div class="row"><input type="text" id="url" placeholder="https://.../stream.mp3"><button class="ghost" id="playUrl">Play</button></div></div>
+  </div>
+  <div class="msg" id="msg" role="status"></div>
+ </section>
+
+ <!-- 
+ Screen 3: Listening 
+ The song name, a drawing of the five strips (the canvas with id "sea"), and 
+ five meters: loudness, low, mid, high and tempo. The Stop button goes back to 
+ screen 2 (or to screen 1 when the microphone is used).
+ In microphone mode a small dropdown appears so you can choose the microphone.
+ The little chip says "headphones" or "microphone" (its id is chipSrc).
+ -->
+ <section id="s3" class="sec" hidden>
+  <div class="top"><div><div class="lab">Now listening</div><h2 id="title">Slow tide</h2></div>
+   <div class="chips"><span class="chip on" id="chipSrc">headphones</span><span class="chip" id="chipBridge">bridge: checking</span><button class="ghost" id="stop">Stop</button></div></div>
+  <div class="row" id="micRow" hidden><select id="micSel" aria-label="Microphone"></select></div>
+  <div class="stage"><canvas id="sea"></canvas></div>
+  <div class="meters">
+   <div class="meter loud"><span class="lab">Loudness</span><span class="v" id="vL">0.00</span><div class="bar"><i id="bL"></i></div></div>
+   <div class="meter"><span class="lab">Low</span><span class="v" id="vLo">0.00</span><div class="bar"><i id="bLo"></i></div></div>
+   <div class="meter"><span class="lab">Mid</span><span class="v" id="vMi">0.00</span><div class="bar"><i id="bMi"></i></div></div>
+   <div class="meter"><span class="lab">High</span><span class="v" id="vHi">0.00</span><div class="bar"><i id="bHi"></i></div></div>
+   <div class="meter"><span class="lab">Tempo</span><span class="v" id="vT">--</span><div class="bar"><i id="bT"></i></div></div>
+  </div>
+  <p class="note mute" id="hint">Keep this tab visible while the product runs. Browsers slow hidden tabs down.</p>
+ </section>
+</main>
+
+<script>
+/*
+Part 3: Code (JavaScript)
+What it does: 
+Everything that moves. It is split into these sections: 
+A. Helpers and shared variable
+B. Bridge to Wekinator and Processing 
+C. Audio engine and the demo songs
+D. Sources: file, radio, shared tab, stop 
+D2. Microphone mode
+E. Feature extraction (sound becomes numbers)
+F. The sea preview: drawing and physics
+G. Frame loop and buttons
+
+The flow: 
+Song plays, then the analyzer listens, then tick() makes the numbers 40 times
+a second, then the page sends them to bridge.py over a WebSocket 20 times a second.
+*/
+(function(){
+
+/*
+A. HELPERS AND SHARED VARIABLES
+$ is a short way to find an element on the page. show(n) shows screen n and hides 
+the others. clamp keeps a number between 0 and 1. 
+The let line holds things many functions need: the audio context, the analyzer,
+the timer and the WebSocket.
+*/
+const $=s=>document.querySelector(s);
+const show=n=>{['s1','s2','s3'].forEach((id,i)=>$('#'+id).hidden=(i+1!==n))};
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+let ctx=null,an=null,master=null,stopSrc=null,tickT=null,ws=null,wsOk=false;
+
+/* 
+B. BRIDGE TO WEKINATOR AND PROCESSING
+This only exists when bridge.py is running on the laptop.
+The page connects to ws://127.0.0.1:8765. If it fails, it tries again every 
+2.5 seconds. The chips on screens 2 and 3 say "bridge: sending to Wekinator" 
+when it works, and "preview only" when it does not.
+The page only tries to connect when it is opened from localhost, so it never 
+bothers other websites.
+*/
+let retry=null;
+function connect(){
+  if(ws&&ws.readyState<2)return;
+  try{ws=new WebSocket('ws://127.0.0.1:8765');}catch(e){setBridge(false);clearTimeout(retry);retry=setTimeout(connect,2500);return;}
+  ws.onopen=()=>{wsOk=true;setBridge(true)};
+  ws.onerror=()=>{try{ws.close()}catch(e){}};
+  ws.onclose=()=>{wsOk=false;setBridge(false);clearTimeout(retry);retry=setTimeout(connect,2500)};
+}
+function setBridge(ok){['chipBridge','chipBridge1'].forEach(id=>{const c=$('#'+id);c.textContent=ok?'bridge: sending to Wekinator':'bridge: not running (preview only)';c.className='chip '+(ok?'on':'')})}
+setBridge(false);if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname))connect();
+
+/*
+C. AUDIO ENGINE AND THE DEMO SONGS
+ensureCtx() creates the browser audio system once. The analyser (an) is the 
+"ear" that tick() listens with. The master gain is the volume, and it feeds 
+both the analyser and the headphones. The helper functions (osc, nz, env, 
+sequencer) are tiny synthesizer tools. The three demo songs are built from
+them, so they work with no internet and no files.
+
+TO ADD A DEMO SONG:
+Copy one entry inside DEMOS, give it a new name, change the notes, then add a 
+card for it in screen 2.
+*/
+function ensureCtx(){
+  if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();an=ctx.createAnalyser();an.fftSize=2048;an.smoothingTimeConstant=0.3;
+    master=ctx.createGain();master.gain.value=0.8;master.connect(an);master.connect(ctx.destination);}
+  if(ctx.state==='suspended')ctx.resume();
+}
+function noiseBuf(){const b=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b}
+function env(g,t,a,peak,r){g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(0.0001,t+a+r)}
+function osc(type,f,t,dur,peak,a,r,dest,filt){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f,t);env(g,t,a,peak,r);
+  let n=o;if(filt){const fl=ctx.createBiquadFilter();fl.type=filt.t;fl.frequency.value=filt.f;o.connect(fl);n=fl}n.connect(g);g.connect(dest);o.start(t);o.stop(t+dur+a+r+.1)}
+function nz(t,dur,peak,filt,dest){const s=ctx.createBufferSource();s.buffer=nzb;const g=ctx.createGain(),f=ctx.createBiquadFilter();f.type=filt.t;f.frequency.value=filt.f;env(g,t,.003,peak,dur);s.connect(f);f.connect(g);g.connect(dest);s.start(t);s.stop(t+dur+.05)}
+let nzb=null;
+function sequencer(bpm,sub,fn){ // sub = steps per beat
+  let step=0,next=ctx.currentTime+.1;const dt=60/bpm/sub;
+  const id=setInterval(()=>{while(next<ctx.currentTime+.3){fn(step,next);next+=dt;step++}},60);
+  return()=>clearInterval(id);
+}
+const DEMOS={
+ calm:{name:'Slow tide',go(){const ch=[[220,261.6,329.6],[174.6,220,261.6],[196,246.9,293.7],[164.8,207.7,246.9]];
+   return sequencer(70,.25,(s,t)=>{const c=ch[s%4];c.forEach(f=>osc('sine',f,t,3.4,.12,1.2,2.2,master));osc('sine',c[0]/2,t,3.4,.14,1.0,2.4,master);
+     nz(t+.5,2.5,.05,{t:'lowpass',f:500},master)})}},
+ energy:{name:'Storm beat',go(){const bl=[55,55,82.4,55,65.4,65.4,98,65.4];
+   return sequencer(128,4,(s,t)=>{const b=s%16;
+     if(b%4===0){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(45,t+.12);env(g,t,.002,.9,.22);o.connect(g);g.connect(master);o.start(t);o.stop(t+.3)}
+     if(b%4===2)nz(t,.05,.35,{t:'highpass',f:7000},master);
+     if(b%2===0)osc('sawtooth',bl[(s>>1)%8],t,.18,.25,.005,.2,master,{t:'lowpass',f:400});
+     if(b%4===1||b%8===7)osc('square',[440,523,659,784][(s>>1)%4]*1,t,.08,.05,.004,.08,master,{t:'highpass',f:900})})}},
+ bass:{name:'Deep bass',go(){return sequencer(90,2,(s,t)=>{const b=s%8;
+   if(b===0||b===3||b===4)osc('sine',b===3?49:41.2,t,.9,.9,.01,.9,master);
+   if(b===2||b===6)nz(t,.18,.4,{t:'bandpass',f:1800},master);
+   if(b%2===1)nz(t,.03,.12,{t:'highpass',f:8000},master)})}}
+};
+
+/*
+D. SOURCES: DEMO, FILE, RADIO, SHARED TAB, STOP
+Every way of getting sound ends the same way: the sound is connected to the 
+analyser, then begin(name) starts the listening.
+playDemo   : plays one of the synthesized songs
+playElement: plays an audio file or a radio stream
+#tab       : shares a Chrome tab with sound (YouTube, Spotify)
+fail()     : shows a red message and goes back to screen 2
+checkSilence: warns if a radio station sent no sound
+stopAll    : stops everything and clears the timer
+*/
+function playDemo(k){ensureCtx();nzb=nzb||noiseBuf();stopAll();const d=DEMOS[k];stopSrc=d.go();begin(d.name)}
+function playElement(el,name,out){
+  ensureCtx();stopAll();const s=ctx.createMediaElementSource(el);s.connect(an);if(out!==false)s.connect(ctx.destination);
+  el.play().then(()=>begin(name)).catch(e=>fail('Could not play this: '+e.message));
+  stopSrc=()=>{el.pause();try{s.disconnect()}catch(e){}};
+}
+$('#file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const el=new Audio(URL.createObjectURL(f));el.loop=true;playElement(el,f.name.replace(/\.[^.]+$/,''))});
+$('#playUrl').onclick=()=>{const u=$('#url').value.trim();if(!u)return fail('Paste a stream address first.');const el=new Audio();el.crossOrigin='anonymous';el.src=u;playElement(el,'Radio stream');checkSilence()};
+$('#tab').onclick=async()=>{
+  try{ensureCtx();const st=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
+    if(!st.getAudioTracks().length){st.getTracks().forEach(t=>t.stop());return fail('No sound was shared. Choose a browser tab and tick "Share tab audio".')}
+    stopAll();const s=ctx.createMediaStreamSource(new MediaStream(st.getAudioTracks()));s.connect(an); // not sent to speakers: the tab already plays itself
+    st.getVideoTracks().forEach(t=>t.stop());stopSrc=()=>{st.getTracks().forEach(t=>t.stop());s.disconnect()};
+    begin('Live from a tab');$('#hint').textContent='The music still plays from the other tab. Set that tab to your headphones too.';
+  }catch(e){fail('Tab sharing was not allowed here ('+(e.name||'error')+'). In Chrome on the lamp laptop it works.')}
+};
+function fail(m){$('#msg').textContent=m;show(2)}
+function checkSilence(){setTimeout(()=>{if(running&&F.tot<1e-5)fail('No sound reached the page. This station blocks outside use. Try another stream or share a tab.')},4000)}
+function stopAll(){running=false;clearInterval(tickT);if(stopSrc){try{stopSrc()}catch(e){}stopSrc=null}}
+$('#stop').onclick=()=>{const m=micMode;stopAll();show(m?1:2)};   // in microphone mode Stop goes to screen 1, otherwise to screen 2
+
+/*
+D2. MICROPHONE MODE
+Used when you click "I am using a microphone" on screen 1. There is no song list. 
+The page listens to the room through the USB microphone and goes straight to 
+screen 3. Everything after the analyser is exactly the same as with headphones 
+(the meters, the sea and the messages to bridge.py).
+The microphone sound goes into the analyser only and never to the speakers, so it 
+can not howl.
+
+openMic     : opens a microphone (with the browser's sound cleaning turned off)
+fillMics    : puts every microphone in the dropdown
+findLavalier: finds the USB microphone by its name (044, lavalier or usb)
+startMic    : the main function, starts the listening
+MIC_GATE    : how quiet counts as silence. A room is never perfectly silent, and 
+tick() stretches the sound between its quietest and loudest moments, so without 
+a gate the tiny room noise would become big waves. If the Loudness meter moves in 
+a quiet room, make MIC_GATE bigger (for example 0.0005). If it never reacts to 
+music, make it smaller (for example 0.00005).
+*/
+const MIC_GATE=0.0002;
+let gate=1e-5;        // the silence limit used right now (small for headphones, MIC_GATE for the microphone)
+let micMode=false;    // true while the microphone is the active source
+let micSt=null;       // the microphone stream (the live sound coming from the USB cable)
+let micSrc=null;      // the audio node that feeds that stream into the analyser
+
+// asks the browser to open a microphone. If id is given it opens that exact one, otherwise the default one
+async function openMic(id){
+  return navigator.mediaDevices.getUserMedia({audio:{
+    deviceId:id?{exact:id}:undefined,    // a chosen microphone, or let the browser decide
+    echoCancellation:false,              // off: it would remove parts of the music
+    noiseSuppression:false,              // off: it would treat the music as noise and cut it
+    autoGainControl:false                // off: it would keep changing the volume and flatten the waves
+  }});
+}
+
+// fills the dropdown with every microphone the computer has
+async function fillMics(){
+  try{
+    // ask for the list of devices and keep only the ones that take sound in
+    const list=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='audioinput'&&d.deviceId!=='communications');
+    const sel=$('#micSel');             // the dropdown on screen 3
+    sel.innerHTML='';                   // empty it first
+    list.forEach((d,i)=>{               // add one option for each microphone
+      const o=document.createElement('option');
+      o.value=d.deviceId;                                      // the hidden id of the microphone
+      o.textContent=d.label||('Microphone '+(i+1));            // the name you see, or a number if the name is unknown
+      sel.appendChild(o);
+    });
+    return list;                        // give the list back so other code can use it
+  }catch(e){return []}                  // if anything goes wrong, return an empty list
+}
+
+// looks through the names for your USB microphone (044, lavalier or usb) and returns its id
+function findLavalier(list){
+  const m=list.find(d=>/044|lavalier|lav|usb/i.test(d.label));   // the first name that matches
+  return m?m.deviceId:null;             // its id, or nothing if no name matched
+}
+
+// the main function: starts listening through the microphone
+async function startMic(id){
+  stopAll();                            // stop anything that was playing before
+  ensureCtx();                          // make sure the audio engine of the page is switched on
+  let st=await openMic(id);             // open the microphone (the first time the browser asks for permission)
+  const cur=st.getAudioTracks()[0].getSettings().deviceId;   // which microphone we really got
+  const list=await fillMics();          // fill the dropdown (names only appear after permission was given)
+  if(!id){                              // if nobody picked a microphone yet, try to find the USB one
+    const want=findLavalier(list);
+    if(want&&want!==cur){               // we found it and it is not the one we opened
+      st.getTracks().forEach(t=>t.stop());   // close the wrong microphone
+      st=await openMic(want);                // open the USB microphone instead
+    }
+  }
+  micSt=st;                             // remember the stream
+  micSrc=ctx.createMediaStreamSource(st);    // turn the stream into an audio node
+  micSrc.connect(an);                   // connect it to the analyser ONLY, never to the speakers
+  $('#micSel').value=st.getAudioTracks()[0].getSettings().deviceId;   // show the real microphone in the dropdown
+  gate=MIC_GATE;                        // use the microphone silence limit
+  micMode=true;                         // remember that we are in microphone mode
+
+  // what to do when the listening stops: close the microphone and put everything back
+  stopSrc=()=>{
+    st.getTracks().forEach(t=>t.stop());          // switch the microphone off
+    try{micSrc.disconnect()}catch(e){}            // unplug it from the analyser
+    gate=1e-5;                                    // back to the headphone silence limit
+    micMode=false;                                // no longer in microphone mode
+    $('#micRow').hidden=true;                     // hide the dropdown
+    $('#chipSrc').textContent='headphones';       // the little label goes back to "headphones"
+  };
+
+  begin('Live from the microphone');              // open screen 3 with this title
+  $('#micRow').hidden=false;                      // show the microphone dropdown on screen 3
+  $('#chipSrc').textContent='microphone';         // the little label now says "microphone"
+  $('#hint').textContent='The lamp is listening to the room. Play music out loud near the microphone. Keep this tab visible.';
+}
+
+// the button "I am using a microphone" on screen 1
+$('#goMic').onclick=()=>{
+  $('#msg1').textContent='';            // clear an old error message
+  startMic().catch(e=>{                 // start listening, and if it fails:
+    stopAll();                          // stop everything
+    // show a helpful message on screen 1 (e.name tells what went wrong)
+    $('#msg1').textContent='The microphone could not be opened ('+(e.name||'error')+'). Allow microphone access in the browser address bar and check the USB cable.';
+    show(1);                            // go back to screen 1
+  });
+};
+
+// when you pick another microphone in the dropdown, restart listening with that one
+$('#micSel').onchange=()=>{
+  startMic($('#micSel').value).catch(e=>{
+    stopAll();
+    $('#msg1').textContent='That microphone could not be opened ('+(e.name||'error')+').';
+    show(1);
+  });
+};
+
+/* 
+E. FEATURE EXTRACTION (SOUND BECOMES NUMBERS)
+This is the most important section for the ML side.
+
+HOW IT WORKS:
+tick() runs 40 times a second (HZ = 40). Each time it:
+ 1. reads the spectrum from the analyser
+ 2. measures three bands: low 20 to 250 Hz, mid 250 to
+    4000 Hz, high 4000 to 12000 Hz
+ 3. keeps a history of about 20 seconds (HN = 800)
+ 4. stretches each value between its 5% and 95% history
+    points, so every song uses the full 0 to 1 range
+ 5. smooths loudness: it rises fast (0.6) and falls slowly
+    (0.035)
+ 6. guesses the tempo from the low band beats (70 to 160 bpm)
+ 7. sends everything to bridge.py every second tick,
+    which is 20 times a second
+
+SILENCE: "quiet" means no real sound. The limit is gate: very small for headphones, 
+MIC_GATE for the microphone (see D2).
+
+WHAT IS SENT (JSON):
+loud, low, mid, high, bright, bpm, act
+bridge.py forwards them to Wekinator and Processing.
+
+RHYTHMIC ACTIVITY (act), used for the light mood:
+Loudness, brightness and the tempo guess are all stretched or unreliable, so they can
+not tell a calm song from a lively one. act is different. It is NOT stretched per song.
+Every tick it adds up how much the low, mid and high bands ROSE since the last tick
+(only increases count). Calm songs change smoothly, so act stays small. Lively songs
+have strong hits, so act is big. It is averaged over about 10 seconds (the 0.005 below),
+so the light mood drifts slowly. Processing turns act into the light mood.
+*/
+const HZ=40,HN=800;let running=false,tk=0;
+const H={lo:[],mi:[],hi:[],tot:[],sh:[]},lim={};
+const F={tot:0,loud:0,low:0,mid:0,high:0,bright:0,bpm:100,act:0};
+let fb=null,envH=[],prevLow=0,loudEma=0,bpmEma=100;
+let prevL=0,prevM=0,prevH=0,actAvg=0;   // for rhythmic activity: the last low, mid, high values and the slow average
+function band(a,b){const n=an.frequencyBinCount,hz=ctx.sampleRate/2/n;let s=0,c=0;for(let i=Math.max(1,Math.floor(a/hz));i<Math.min(n,Math.ceil(b/hz));i++){s+=Math.pow(10,fb[i]/20);c++}return c?s/c:0}
+function push(a,v){a.push(v);if(a.length>HN)a.shift()}
+function pct(a,p){const s=[...a].sort((x,y)=>x-y);return s[Math.floor(p*(s.length-1))]}
+function limits(k){const a=H[k];lim[k]=[pct(a,.05),pct(a,.95)]}
+function stretch(k,v){const l=lim[k];if(!l||H[k].length<60)return .5;return clamp((v-l[0])/Math.max(l[1]-l[0],1e-6))}
+function bpmNow(){ // autocorrelation of the low-band onsets, 70 to 160 bpm
+  const e=envH,n=e.length;if(n<HZ*4)return bpmEma;let best=-1,lag=0;
+  for(let L=Math.round(60/160*HZ);L<=Math.round(60/70*HZ);L++){let s=0;for(let i=L;i<n;i++)s+=e[i]*e[i-L];s/=(n-L);if(s>best){best=s;lag=L}}
+  return best>1e-9?60*HZ/lag:bpmEma}
+function tick(){
+  if(!running)return;fb=fb||new Float32Array(an.frequencyBinCount);an.getFloatFrequencyData(fb);tk++;
+  const lo=Math.log1p(band(20,250)*50),mi=Math.log1p(band(250,4000)*50),hi=Math.log1p(band(4000,12000)*50),tot=lo+mi+hi;F.tot=band(20,12000);
+  push(H.lo,lo);push(H.mi,mi);push(H.hi,hi);push(H.tot,tot);push(H.sh,tot>0?hi/tot:0);
+  envH.push(Math.max(0,lo-prevLow));if(envH.length>HZ*8)envH.shift();prevLow=lo;
+  if(tk%10===0){['lo','mi','hi','tot','sh'].forEach(limits);bpmEma=.7*bpmEma+.3*bpmNow()}
+  const quiet=F.tot<gate;   // no real sound (the limit depends on headphones or microphone)
+  // rhythmic activity: how much the three bands ROSE since the last tick (only increases count)
+  const flux=quiet?0:Math.max(0,lo-prevL)+Math.max(0,mi-prevM)+Math.max(0,hi-prevH);
+  prevL=lo;prevM=mi;prevH=hi;                         // remember these for the next tick
+  if(tk>3)actAvg+=(flux-actAvg)*0.005;                // slow average, about 10 seconds (the first ticks are skipped)
+  F.act=actAvg;                                       // sent to the bridge below
+  F.low=quiet?0:stretch('lo',lo);F.mid=quiet?0:stretch('mi',mi);F.high=quiet?0:stretch('hi',hi);F.bright=quiet?0:stretch('sh',tot>0?hi/tot:0);
+  const raw=quiet?0:Math.pow(stretch('tot',tot),.7);const a=raw>loudEma?.6:.035;loudEma=(1-a)*loudEma+a*raw;F.loud=loudEma;F.bpm=bpmEma;
+  if(tk%2===0&&wsOk&&ws.readyState===1)ws.send(JSON.stringify({v:4,loud:F.loud,low:F.low,mid:F.mid,high:F.high,bright:F.bright,bpm:F.bpm,act:F.act}));
+}
+function begin(name){running=true;tk=0;for(const k in H)H[k]=[];envH=[];loudEma=0;bpmEma=100;actAvg=0;prevL=prevM=prevH=0;$('#title').textContent=name;$('#msg').textContent='';$('#hint').textContent='Keep this tab visible while the product runs. Browsers slow hidden tabs down.';
+  clearInterval(tickT);tickT=setInterval(tick,1000/HZ);show(3);resize()}
+
+/* 
+F. THE SEA PREVIEW: DRAWING AND PHYSICS
+This is only a simplified preview on the screen. The real waves that move the 
+motors are calculated in Processing (Mode 3), where Wekinator also has a say.
+
+THE RULE (same idea as Processing):
+Strip 1 follows the loudness. Strips 2 to 5 are pulled along by their neighbors, 
+like a wave travelling down a rope. Friction (fr = 1.1) calms them down, 
+and a small pull brings them back to the resting height of 0.2.
+
+draw() paints the five strips as dots on a golden wave.
+*/
+const h=[.2,.2,.2,.2,.2],v=[0,0,0,0,0];
+function physics(dt){
+  const ws2=clamp(5+(F.bpm-60)/100*7,5,12),fr=1.1,sub=8,d=dt/sub;
+  for(let s=0;s<sub;s++){h[0]=.15+F.loud*.85;
+    for(let k=1;k<5;k++){const nx=k<4?h[k+1]:h[k];const acc=ws2*(h[k-1]+nx-2*h[k])-fr*v[k]-.6*(h[k]-.2);v[k]+=acc*d;}
+    for(let k=1;k<5;k++)h[k]=clamp(h[k]+v[k]*d,0,1)}
+}
+const cv=$('#sea'),cx=cv.getContext('2d'),hv=$('#heroSea'),hx=hv.getContext('2d');
+function size(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);return d}
+function resize(){size(cv);size(hv)}addEventListener('resize',resize);
+function draw(c,x,arr,t){
+  const W=c.width,Hh=c.height,pad=W*.06,base=Hh*.88;x.clearRect(0,0,W,Hh);
+  const pts=arr.map((q,i)=>[pad+(W-2*pad)*(i+.5)/5,base-q*Hh*.62]);
+  x.strokeStyle='#1f4652';x.lineWidth=1;x.beginPath();x.moveTo(pad,base);x.lineTo(W-pad,base);x.stroke();
+  pts.forEach(p=>{x.strokeStyle='#2c6a74';x.lineWidth=Math.max(2,W*.004);x.beginPath();x.moveTo(p[0],base);x.lineTo(p[0],p[1]);x.stroke()});
+  const all=[[pad,pts[0][1]],...pts,[W-pad,pts[4][1]]];
+  const g=x.createLinearGradient(0,Hh*.2,0,base);g.addColorStop(0,'rgba(255,179,71,.85)');g.addColorStop(1,'rgba(79,179,170,.25)');
+  x.beginPath();x.moveTo(all[0][0],base);x.lineTo(all[0][0],all[0][1]);
+  for(let i=1;i<all.length-1;i++){const mx=(all[i][0]+all[i+1][0])/2,my=(all[i][1]+all[i+1][1])/2;x.quadraticCurveTo(all[i][0],all[i][1],mx,my)}
+  x.lineTo(all[all.length-1][0],all[all.length-1][1]);x.lineTo(all[all.length-1][0],base);x.closePath();x.fillStyle=g;x.fill();
+  x.strokeStyle='#ffb347';x.lineWidth=Math.max(2,W*.004);x.stroke();
+  pts.forEach((p,i)=>{x.fillStyle='#07161c';x.strokeStyle='#ffb347';x.beginPath();x.arc(p[0],p[1],Math.max(4,W*.008),0,7);x.fill();x.stroke();
+    x.fillStyle='#86a9a8';x.font=Math.round(W*.018+4)+'px IBM Plex Mono, monospace';x.textAlign='center';x.fillText(String(i+1),p[0],base+Hh*.08)});
+}
+
+/*
+G. FRAME LOOP AND BUTTONS
+frame() runs every time the screen redraws (about 60 times a second). 
+On screen 3 it moves the preview sea and updates the five meters. On screen 1 
+it animates the small welcome sea. At the end, the buttons are connected 
+to their jobs.
+window.__sea is a window for debugging: type __sea.F in the Chrome console to 
+see the live numbers.
+*/
+let last=performance.now();
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(!$('#s3').hidden){physics(dt);draw(cv,cx,h,now);
+    const set=(id,val,txt)=>{$('#b'+id).style.width=(val*100)+'%';$('#v'+id).textContent=txt};
+    set('L',F.loud,F.loud.toFixed(2));set('Lo',F.low,F.low.toFixed(2));set('Mi',F.mid,F.mid.toFixed(2));set('Hi',F.high,F.high.toFixed(2));set('T',clamp((F.bpm-60)/100),Math.round(F.bpm)+'')}
+  else if(!$('#s1').hidden){const t=now/1000,a=[0,1,2,3,4].map(i=>.45+.3*Math.sin(t*1.1-i*.8));draw(hv,hx,a,now)}
+  requestAnimationFrame(frame)}
+requestAnimationFrame(frame);resize();
+$('#go').onclick=()=>show(2);
+document.querySelectorAll('[data-demo]').forEach(b=>b.onclick=()=>playDemo(b.dataset.demo));
+$('#fileBtn').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('#file').click()}};
+window.__sea={F,h,get ws(){return wsOk}};
+})();
+</script>
+</body></html>
