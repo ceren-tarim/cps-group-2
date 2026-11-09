@@ -158,9 +158,9 @@ A 28BYJ-48 motor has four small electromagnets. To turn it, the ESP32-S3 switche
 
 In the code the pins are listed in the order IN1, IN3, IN2, IN4, which is the order the AccelStepper library needs for this motor type. GPIO 3 is a strapping pin, so move strip 3 if the board acts strangely at start up.
 
-![Signal wiring](docs/esp32_signals.png)
-![Power wiring](docs/esp32_power.png)
-<!-- TODO: add the two wiring pictures from Notion to docs/ -->
+<img width="1200" height="1030" alt="esp32_signals" src="https://github.com/user-attachments/assets/279b1cfe-108f-4ad3-adcf-5adee0242373" />
+
+<img width="1200" height="840" alt="esp32_power" src="https://github.com/user-attachments/assets/14d1327b-6b4d-4fb1-baf1-b55f2313a428" />
 
 ### Power and safety
 
