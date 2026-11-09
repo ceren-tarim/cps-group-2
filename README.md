@@ -4,10 +4,9 @@ Sound to Sea turns songs into ocean waves. Five strips rise and fall under one s
 
 This repository holds all the source code for the project, and documents the mechanics, hardware, software pipeline and machine learning behind it, so the work can be understood without an in person demo.
 
-> Course: Cyber Physical Systems, Innovation Design Engineering (Royal College of Art and Imperial College London)
-> Team: TODO add team names and who built what (my part: machine learning, AI and Processing)
+> Course: Cyber Physical Systems, Innovation Design Engineering (Royal College of Art & Imperial College London)
+> Team: Juan, Jeonga, Ceren
 
-![The finished piece](docs/finished_piece.jpg)
 <!-- TODO: add a photo of the finished box -->
 
 ---
