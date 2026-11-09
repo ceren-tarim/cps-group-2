@@ -96,7 +96,6 @@ Each of the five strips is moved by its own small motor using a **rack and pinio
 * **Stroke:** the rack is limited by its length and its guide. The first structure had about 2 cm of travel (0 to 140 degrees of motor turn, about 7 degrees per millimetre). The current, taller structure uses 30 to 230 degrees. The code never sends a motor outside these two limits.
 * **Home position:** before power on, every strip is pushed down by hand to its lowest point. The motors have no position sensor, so the code assumes this is where they start.
 * **Making the wave readable:** with a short stroke, small height differences are hard to see. Processing adds two steps after the wave maths, BOOST and SPREAD (see [Software design](#6-software-design)). A longer rack and a bigger gear would give more travel than 2 cm.
-* **What we modified:** TODO describe your own modifications to the provided parts, for example the strips, the sheet, the moiré layer, the guides and how the racks were mounted. Add photos to `docs/`.
 
 ### The wave rule
 
@@ -235,17 +234,26 @@ Wekinator learns a mapping from five numbers describing the music to three numbe
 
 ### Training data
 
-We recorded examples while playing the page's three built in demo songs, which give clearly different inputs. For each song we waited about 20 seconds (so the page had settled), set the three output sliders by hand, and recorded about 15 seconds of examples.
+We recorded examples while playing the page's three built in demo songs, which give clearly different inputs. For each song we waited about 20 seconds (so the page had settled), set the three output sliders by hand, and recorded about 17 to 18 seconds of examples. Wekinator records about 20 examples a second, which gave 1,053 examples in total.
 
-| Song | Speed | Fade | Height |
-| --- | --- | --- | --- |
-| Slow tide (calm) | 0.2 | 0.2 | 0.6 |
-| Storm beat (energetic) | 0.8 | 0.8 | 1.0 |
-| Deep bass | 0.5 | 0.2 | 1.0 |
+| Song | Speed | Fade | Height | Examples |
+| --- | --- | --- | --- | --- |
+| Slow tide (calm) | 0.2 | 0.2 | 0.6 | 333 |
+| Storm beat (energetic) | 0.8 | 0.8 | 1.0 | 355 |
+| Deep bass | 0.5 | 0.2 | 1.0 | 365 |
 
-Wekinator project type: all continuous, 5 inputs on `/wek/inputs` (port 6448), 3 outputs on `/wek/outputs` (port 12000). The trained project is saved in `wekinator/`.
+Wekinator project type: all continuous, 5 inputs on `/wek/inputs` (port 6448), 3 outputs on `/wek/outputs` (port 12000).
 
-TODO: add the number of examples recorded per song, and any real songs you added to the training.
+### Where the data is
+
+The training data is saved by Wekinator as an ARFF file, a plain text table. Each row is one recorded example: the 5 input numbers (low, mid, high, tempo, brightness) followed by the 3 output numbers (speed, fade, height), plus an ID, a time stamp and a training round number.
+
+* Training data: [`wekinator/data.arff`](wekinator/data.arff)
+* Trained project: [`wekinator/WekinatorProject_Sound_To_Sea.wekproj`](wekinator/WekinatorProject_Sound_To_Sea.wekproj)
+
+To use it, open Wekinator, choose File, Open project, select the `.wekproj` file, and click Train and then Run.
+
+We did not add real songs to the training. The model was trained only on the three demo songs and then tested by running the full chain with other songs.
 
 ### Why this model
 
