@@ -13,13 +13,13 @@ This repository holds all the source code for the project, and documents the mec
 
 ## Contents
 
-1. [Concept](#1-concept)
-2. [How the system works](#2-how-the-system-works)
-3. [Repository structure](#3-repository-structure)
-4. [Mechanical design](#4-mechanical-design)
-5. [Hardware design](#5-hardware-design)
-6. [Software design](#6-software-design)
-7. [Machine learning](#7-machine-learning)
+1. [Concept](#1-concept-ilo1)
+2. [How the system works](#2-how-the-system-works-ilo1-ilo4)
+3. [Repository structure](#3-repository-structure-ilo4)
+4. [Mechanical design](#4-mechanical-design-ilo4)
+5. [Hardware design](#5-hardware-design-ilo4)
+6. [Software design](#6-software-design-ilo4)
+7. [Machine learning](#7-machine-learning-ilo2-ilo3)
 8. [How to run it](#8-how-to-run-it)
 9. [What we tested and what we did not](#9-what-we-tested-and-what-we-did-not)
 10. [Problems we hit and how we solved them](#10-problems-we-hit-and-how-we-solved-them)
@@ -43,7 +43,7 @@ Brief limits we designed within: the main output is mechanical movement, the pro
 ## 2. How the system works (ILO1, ILO4)
 
 ```
-index.html  →  bridge.py  →  Wekinator  →  wave_to_motors.pde  →  ESP32-S3  →  motors and lights
+index.html  →  bridge.py  →  Wekinator  →  wave_to_motors_final.pde  →  ESP32-S3  →  motors and lights
  (browser)     (laptop)      (ML model)       (Processing)        (USB serial)
 ```
 
@@ -63,21 +63,23 @@ A push button on the box pauses the strips (see [Button](#button)).
 ## 3. Repository structure (ILO4)
 
 ```
-sound-to-sea/
   README.md
   esp32/
-    esp32_s3_simplified_final_with_button.ino   final code for the ESP32-S3
-    tests/                                       test sketches (one folder each)
+    esp32_s3_simplified_final_with_button/
+      esp32_s3_simplified_final_with_button.ino   final code for the ESP32-S3
+    tests/                                         test sketches, one folder each
   processing/
-    wave_to_motors_final.pde                     the wave maths and serial output
+    wave_to_motors_final/
+      wave_to_motors_final.pde                     the wave maths and serial output
   web/
-    index.html                                   audio analysis page (headphones and microphone)
-  bridge/
-    bridge.py                                    forwards page data to Wekinator and Processing
+    index.html                                     audio analysis page (headphones and microphone)
+    bridge.py                                      serves the page and forwards data to Wekinator and Processing
   wekinator/
-    WekinatorProject_Sound_To_Sea.wekproj        the trained project
-  docs/                                          photos and diagrams
+    WekinatorProject_Sound_To_Sea.wekproj          the trained project
+    data.arff                                      the training data
+  docs/                                            photos and diagrams                                        photos and diagrams
 ```
+Two folder rules to keep in mind: Arduino and Processing both need the sketch folder to have the same name as the sketch file, and `index.html` must stay in the same folder as `bridge.py`, because the bridge serves the page from there.
 
 | File | What it does |
 | --- | --- |
@@ -85,7 +87,7 @@ sound-to-sea/
 | `bridge.py` | A small helper that runs on the laptop. It serves the page at `localhost:8000`, takes the numbers from the page and forwards them to Wekinator and Processing. |
 | `wave_to_motors_final.pde` | The Processing sketch, the brain of the waves. Receives loudness and activity from the page and Speed, Fade and Height from Wekinator, works out how high each strip should be, shows them on screen, works out the light mood, and sends the heights and the light mood to the ESP32-S3. |
 | `esp32_s3_simplified_final_with_button.ino` | The ESP32-S3 code for the five motors, the NeoPixels and the button, written in plain angles. Needs the AccelStepper and Adafruit NeoPixel libraries. |
-| `tests/` | Small sketches to test one thing at a time: type an angle for one strip, spin each motor on its own, test only the lights, test the angles with lights and the button. |
+| `tests/` | Small sketches to test one thing at a time: `test_type_angle_final_final` (type an angle for one strip, with the lights), `test_type_angle_final_final_with_button` (the same with the push button) and `test_neopixel_only` (only the lights). |
 
 ---
 
@@ -95,7 +97,15 @@ Each of the five strips is moved by its own small motor using a **rack and pinio
 
 * **Stroke:** the rack is limited by its length and its guide. The first structure had about 2 cm of travel (0 to 140 degrees of motor turn, about 7 degrees per millimetre). The current, taller structure uses 30 to 230 degrees. The code never sends a motor outside these two limits.
 * **Home position:** before power on, every strip is pushed down by hand to its lowest point. The motors have no position sensor, so the code assumes this is where they start.
-* **Making the wave readable:** with a short stroke, small height differences are hard to see. Processing adds two steps after the wave maths, BOOST and SPREAD (see [Software design](#6-software-design)). A longer rack and a bigger gear would give more travel than 2 cm.
+* **Making the wave readable:** with a short stroke, small height differences are hard to see. Processing adds two steps after the wave maths, BOOST and SPREAD (see [Software design](#6-software-design-ilo4)). A longer rack and a bigger gear would give more travel than 2 cm.
+
+### What we modified from the provided kit
+
+The provided kit is built around servos and an Arduino Nano Every. We changed it in three ways:
+
+* **Actuators:** we replaced the servos with five 28BYJ-48 stepper motors, each driving its own rack and pinion, so every strip has its own controlled up and down movement.
+* **Controller:** we replaced the Arduino Nano Every with an ESP32-S3, because five motors need 20 pins and the AI part can also run on this chip.
+* **Structure:** we built a new low, wide box with five strips under one stretchy sheet and a flat moiré layer, instead of an arm.
 
 ### The wave rule
 
@@ -156,7 +166,7 @@ In the code the pins are listed in the order IN1, IN3, IN2, IN4, which is the or
 
 * The motors and the NeoPixels are powered from the **5V power bank**, never from the ESP32-S3 5V pin. The ESP32-S3 is powered by the laptop over USB.
 * The power bank GND is joined to the ESP32-S3 GND. Without a shared ground nothing works.
-* Each motor needs roughly 100 to 200 mA, so five motors stay around 1 A or less, which fits the 2 A limit of the bank.
+* Each motor needs roughly 100 to 200 mA, so five motors should stay around 1 A or less, which fits the 2 A limit of the bank (this is an estimate, we have not measured the real current yet).
 * NeoPixel brightness is capped at 50 of 255 (`LIGHT_BRIGHTNESS`) to leave room for the motors.
 * The code switches a motor's coils off when it has arrived (`disableOutputs`), which saves power and keeps the motors from getting hot.
 * Motor speed is limited (`SPEED`, `ACCEL`), because motors that go too fast lose steps and strips drift to different heights.
@@ -178,7 +188,7 @@ The lights keep following the music in both states.
 
 ## 6. Software design (ILO4)
 
-The full pipeline runs from the browser to the ESP32-S3, as shown in [How the system works](#2-how-the-system-works). Everything past the provided examples was written or changed by us.
+The full pipeline runs from the browser to the ESP32-S3, as shown in [How the system works](#2-how-the-system-works-ilo1-ilo4). Everything past the provided examples was written or changed by us.
 
 ### What we added or changed beyond the provided examples
 
@@ -208,7 +218,7 @@ Limit: this is an estimate of the energy of the song from how punchy it is, not 
 
 ### Source code
 
-All source code is in this repository (see [Repository structure](#3-repository-structure)). The libraries needed are AccelStepper and Adafruit NeoPixel for the ESP32-S3, `websockets` and `python-osc` for the bridge, and Processing with the oscP5 library.
+All source code is in this repository (see [Repository structure](#3-repository-structure-ilo4)). The libraries needed are AccelStepper and Adafruit NeoPixel for the ESP32-S3, `websockets` and `python-osc` for the bridge, and Processing with the oscP5 library.
 
 ---
 
@@ -292,7 +302,7 @@ The tempo reading is unreliable on songs without a clear beat (Slow tide read ab
 1. **Hardware (with motors):** switch everything off and push all five strips down by hand to their lowest point. Plug the ESP32-S3 into the laptop with USB, then switch on the power bank. Close the Arduino Serial Monitor.
 2. **Wekinator:** open it, load `WekinatorProject_Sound_To_Sea.wekproj` (File > Open) and click **Run**.
 3. **Processing:** open `wave_to_motors_final.pde`. Set `USE_SERIAL = false` if you have no motors, or `true` with motors. Set `PORT_INDEX` to the number of your ESP32-S3 port in the printed list. Press Play. With motors, the console says "Arduino connected". Wait about 5 seconds, because the ESP32-S3 restarts.
-4. **Bridge:** in a terminal in the project folder run `py bridge.py`. Leave the window open.
+4. **Bridge:**in a terminal, go to the \web folder and run `py bridge.py`. Leave the window open.
 5. **Page:** open `http://localhost:8000` in Chrome, in one tab only. Click "I am wearing headphones" (or "I am using a microphone", which skips the next step). The terminal should print "page connected" once.
 6. **Song:** click a demo song, or your own file, or share a tab. Keep the tab visible, browsers slow down hidden tabs.
 7. **Wait 20 seconds.** After that the strips on the page, in Processing and (with motors) on the real box should rise and fall together, with the wave travelling from strip 1 to strip 5.
