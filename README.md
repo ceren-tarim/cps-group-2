@@ -96,7 +96,7 @@ Two folder rules to keep in mind: Arduino and Processing both need the sketch fo
 
 Each of the five strips is moved by its own small motor using a **rack and pinion**. A motor turns a small gear (a pinion), and the gear pushes a toothed rack up and down, so the strip rises and falls. We chose this mechanism because it turns the continuous rotation of a cheap stepper motor into a straight, controllable up and down movement, with no springs or linkages to tune, and it keeps the box low and flat (rule 4).
 
-* **Stroke:** the rack is limited by its length and its guide. The first structure had about 2 cm of travel (0 to 140 degrees of motor turn, about 7 degrees per millimetre). The current, taller structure uses 30 to 230 degrees. The code never sends a motor outside these two limits.
+* **Stroke:** the rack is limited by its length and its guide. The first structure had about 2 cm of travel (0 to 140 degrees of motor turn, about 7 degrees per millimetre). The current, taller structure uses 30 to 355 degrees (5 degree left for margin). The code never sends a motor outside these two limits.
 * **Home position:** before power on, every strip is pushed down by hand to its lowest point. The motors have no position sensor, so the code assumes this is where they start.
 * **Making the wave readable:** with a short stroke, small height differences are hard to see. Processing adds two steps after the wave maths, BOOST and SPREAD (see [Software design](#6-software-design-ilo4)). A longer rack and a bigger gear would give more travel than 2 cm.
 
