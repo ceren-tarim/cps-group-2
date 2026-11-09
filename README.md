@@ -204,16 +204,16 @@ The full pipeline runs from the browser to the ESP32-S3, as shown in [How the sy
 
 ### The lights
 
-A colour gradient flows along the pixels, like on a gaming keyboard.
+A colour gradient flows along the pixels, like on a gaming keyboard. Calm music gets cool colours, like still water, and lively music gets warm colours, like a sunset.
 
 | Song feel | Gradient colours |
 | --- | --- |
-| Calm | warm orange, gold and light yellow |
-| Lively | deep blue, indigo and purple |
+| Calm | cool deep sea blue, teal and seafoam |
+| Lively | warm red orange, orange and golden yellow |
 
-The mood comes from **rhythmic activity**, which tells how punchy the music is. We first tried loudness and tempo, but loudness is stretched per song so it is about the same for every song, and the tempo guess is often wrong, so calm songs sometimes turned blue. Rhythmic activity adds up how much the low, mid and high bands rise from one moment to the next (only increases count) and averages it over about 10 seconds. It is not stretched per song, so it can tell calm from lively. On the three demo songs it read 0.005 (Slow tide), 0.021 (Deep bass) and 0.051 (Storm beat). Processing maps it between `ACT_LOW` and `ACT_HIGH` to a mood from 0 (calm) to 1 (lively), averaged over a few seconds so the colours do not jump.
+The mood comes from **rhythmic activity**, which tells how punchy the music is. We first tried loudness and tempo, but loudness is stretched per song so it is about the same for every song, and the tempo guess is often wrong, so calm songs sometimes got the lively colours. Rhythmic activity adds up how much the low, mid and high bands rise from one moment to the next (only increases count) and averages it over about 10 seconds. It is not stretched per song, so it can tell calm from lively. On the three demo songs it read 0.005 (Slow tide), 0.021 (Deep bass) and 0.051 (Storm beat). Processing maps it between `ACT_LOW` and `ACT_HIGH` to a mood from 0 (calm) to 1 (lively), averaged over a few seconds so the colours do not jump.
 
-Processing sends the mood, the flow speed and the low, mid and high strength to the ESP32-S3. Low, mid and high make the three colours of the gradient glow, each group of pixels gets brighter when its strip rises, and if nothing arrives for 3 seconds the lights go back to a slow warm flow.
+Processing sends the mood, the flow speed and the low, mid and high strength to the ESP32-S3. Low, mid and high make the three colours of the gradient glow, each group of pixels gets brighter when its strip rises, and if nothing arrives for 3 seconds the lights go back to a slow cool flow.
 
 Limit: this is an estimate of the energy of the song from how punchy it is, not real emotion detection. A fast sad song can read as lively.
 
