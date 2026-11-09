@@ -262,7 +262,7 @@ We did not add real songs to the training. The model was trained only on the thr
 * **It is interactive.** If two songs look alike, we record more examples and retrain in seconds, with no code. This fitted the short project timeline.
 * **The outputs go straight into a physical system**, so predictable, smooth numbers matter more than a complex model.
 
-TODO: name the algorithm your Wekinator project uses (shown in the Wekinator output window) and add one sentence on why.
+The model is Wekinator's neural network, the default for continuous outputs, which we did not change. We chose it because the link from the five music numbers to our three wave settings is not a straight line, for example a song that is both loud and bright should not simply add up the effect of loudness and the effect of brightness, and a neural network can learn curved relationships like this. It still trains in a second or two on about a thousand examples, and it gives smooth outputs between the example songs.
 
 ### Limits we found
 
