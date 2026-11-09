@@ -45,7 +45,7 @@ Brief limits we designed within: the main output is mechanical movement, the pro
 
 ```
 index.html  →  bridge.py  →  Wekinator  →  wave_to_motors_final.pde  →  ESP32-S3  →  motors and lights
- (browser)     (laptop)      (ML model)       (Processing)        (USB serial)
+ (browser)     (laptop)      (ML model)         (Processing)          (USB serial)
 ```
 
 1. A song plays in the browser page through headphones, or the page listens to the room through a USB microphone.
