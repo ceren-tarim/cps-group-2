@@ -27,7 +27,7 @@ This repository holds all the source code for the project, and documents the mec
 
 ---
 
-## 1. Concept
+## 1. Concept (ILO1)
 
 Four rules shaped every decision:
 
@@ -40,7 +40,7 @@ Brief limits we designed within: the main output is mechanical movement, the pro
 
 ---
 
-## 2. How the system works
+## 2. How the system works (ILO1, ILO4)
 
 ```
 index.html  →  bridge.py  →  Wekinator  →  wave_to_motors.pde  →  ESP32-S3  →  motors and lights
@@ -60,7 +60,7 @@ A push button on the box pauses the strips (see [Button](#button)).
 
 ---
 
-## 3. Repository structure
+## 3. Repository structure (ILO4)
 
 ```
 sound-to-sea/
@@ -89,7 +89,7 @@ sound-to-sea/
 
 ---
 
-## 4. Mechanical design
+## 4. Mechanical design (ILO4)
 
 Each of the five strips is moved by its own small motor using a **rack and pinion**. A motor turns a small gear (a pinion), and the gear pushes a toothed rack up and down, so the strip rises and falls. We chose this mechanism because it turns the continuous rotation of a cheap stepper motor into a straight, controllable up and down movement, with no springs or linkages to tune, and it keeps the box low and flat (rule 4).
 
@@ -112,7 +112,7 @@ Two rules decide every height:
 
 ---
 
-## 5. Hardware design
+## 5. Hardware design (ILO4)
 
 ### Components
 
@@ -176,7 +176,7 @@ The lights keep following the music in both states.
 
 ---
 
-## 6. Software design
+## 6. Software design (ILO4)
 
 The full pipeline runs from the browser to the ESP32-S3, as shown in [How the system works](#2-how-the-system-works). Everything past the provided examples was written or changed by us.
 
@@ -212,7 +212,7 @@ All source code is in this repository (see [Repository structure](#3-repository-
 
 ---
 
-## 7. Machine learning
+## 7. Machine learning (ILO2, ILO3)
 
 ### What the model does
 
@@ -361,7 +361,7 @@ Upload the test sketches in `esp32/tests/`. For example, type `1 90` in the Seri
 
 ## 11. Credits
 
-* Concept and mechanics: TODO team names
-* Machine learning, AI and Processing: TODO your name
-* Electronics and wiring: TODO
+* Concept and mechanics: Juan & Jeonga 
+* Machine learning, AI and Processing: Ceren
+* Electronics and wiring: Juan & Jeonga
 * Built with Wekinator, Processing, Arduino, AccelStepper and Adafruit NeoPixel.
