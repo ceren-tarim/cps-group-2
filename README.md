@@ -312,7 +312,7 @@ The tempo reading is unreliable on songs without a clear beat (Slow tide read ab
 1. **Hardware (with motors):** switch everything off and push all five strips down by hand to their lowest point. Plug the ESP32-S3 into the laptop with USB, then switch on the power bank. Close the Arduino Serial Monitor.
 2. **Wekinator:** open it, load `WekinatorProject_Sound_To_Sea.wekproj` (File > Open) and click **Run**.
 3. **Processing:** open `wave_to_motors_final.pde`. Set `USE_SERIAL = false` if you have no motors, or `true` with motors. Set `PORT_INDEX` to the number of your ESP32-S3 port in the printed list. Press Play. With motors, the console says "Arduino connected". Wait about 5 seconds, because the ESP32-S3 restarts.
-4. **Bridge:**in a terminal, go to the \web folder and run `py bridge.py`. Leave the window open.
+4. **Bridge:** in a terminal, go to the \web folder and run `py bridge.py`. Leave the window open.
 5. **Page:** open `http://localhost:8000` in Chrome, in one tab only. Click "I am wearing headphones" (or "I am using a microphone", which skips the next step). The terminal should print "page connected" once.
 6. **Song:** click a demo song, or your own file, or share a tab. Keep the tab visible, browsers slow down hidden tabs.
 7. **Wait 20 seconds.** After that the strips on the page, in Processing and (with motors) on the real box should rise and fall together, with the wave travelling from strip 1 to strip 5.
