@@ -201,11 +201,14 @@ The full pipeline runs from the browser to the ESP32-S3, as shown in [How the sy
 * **Light mood from rhythmic activity:** see below.
 * **Plain angle motor code on the ESP32-S3:** all limits are in degrees, `QUIET_ANGLE`, `LOUD_ANGLE`, `MIN_ANGLE`, `MAX_ANGLE`, `SPEED` and `ACCEL` are at the top of the file and every line is commented.
 * **Pause button** on GPIO 2 with a 50 ms debounce.
-
+  
+### The Web UI
 <img width="1248" height="652" alt="Screenshot 2026-11-09 190116" src="https://github.com/user-attachments/assets/f4f5b764-ab01-4a62-a8ac-3e320edd886a" />
 
+### Headphones Option
 <img width="1135" height="639" alt="Screenshot 2026-11-09 190124" src="https://github.com/user-attachments/assets/a3d04433-8025-41ba-86ca-0e9c292be735" />
 
+### Microphone Option
 <img width="1134" height="618" alt="Screenshot 2026-11-09 190142" src="https://github.com/user-attachments/assets/9224af83-38f8-4aa1-9f73-9b8699a473c9" />
 
 ### The lights
