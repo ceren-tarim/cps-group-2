@@ -381,4 +381,5 @@ Upload the test sketches in `esp32/tests/`. For example, type `1 90` in the Seri
 * Concept and mechanics: Juan & Jeonga 
 * Machine learning, AI and Processing: Ceren
 * Electronics and wiring: Juan & Jeonga
+* Documentation: Ceren
 * Built with Wekinator, Processing, Arduino, AccelStepper and Adafruit NeoPixel.
